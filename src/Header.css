@@ -1,0 +1,83 @@
+/* ---------- scalable sizing tokens ---------- */
+:root{
+  --brand-size: clamp(20px, 1.2rem + 1.2vw, 40px); /* text size */
+  --pad-x: clamp(16px, 2vw, 32px);                 /* side padding */
+  --pad-y: clamp(10px, 1.2vw, 18px);               /* top/bottom padding */
+  --gap:    clamp(6px, 0.9vw, 12px);               /* gaps between items */
+}
+
+/* Use STICKY so content is naturally pushed below the header
+   (swap to position: fixed if you want it floating) */
+.site-header{
+  position: sticky;     /* change to fixed if you want it always floating */
+  top: 0;
+  left: 0;
+  width: 100%;
+  padding: var(--pad-y) var(--pad-x);
+  background: #fff;     /* or transparent */
+  z-index: 1000;
+
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: clamp(8px, 1.2vw, 14px);
+  box-shadow: 0 2px 18px rgba(0,0,0,.05); /* subtle separation */
+  box-shadow: none; 
+}
+
+/* Brand (text + leaf) scales fluidly */
+.brand{
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gap);
+  font: 800 var(--brand-size)/1 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  color: #111;
+  text-decoration: none;
+  white-space: nowrap;  /* keeps “Leaf Watch” on one line */
+}
+
+.brand-icon{
+  height: 1.1em;        /* scales with text size */
+  width: 1.1em;
+  object-fit: contain;
+}
+
+/* Stats card under the brand */
+.stats-card{
+  width: min(600px, 92vw);
+  background: rgba(255,255,255,0.9);
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: clamp(12px, 1.4vw, 18px);
+  box-shadow: 0 10px 25px rgba(0,0,0,.06);
+  color: #111;
+}
+
+.stats-card h2{
+  margin: 0 0 6px 0;
+  font-size: clamp(14px, .9rem + .3vw, 18px);
+  font-weight: 700;
+}
+
+.stats-card ul{
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+
+.stats-card li{
+  font-size: clamp(13px, .85rem + .2vw, 16px);
+  display: flex;
+  gap: 8px;
+}
+
+.stats-card li strong{
+  min-width: 11ch;     /* label column width */
+}
+
+/* Optional: tweak for very small phones */
+@media (max-width: 360px){
+  .brand{ font-weight: 700; }
+}
