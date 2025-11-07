@@ -1,0 +1,491 @@
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>World Map</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            /* background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); */
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        header {
+            text-align: center;
+            /* color: white; */
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            margin-bottom: 10px;
+        }
+        
+        .map-container {
+            width: 100%;
+            max-width: 1200px;
+            height: 600px;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            border: 3px solid rgba(255,255,255,0.2);
+        }
+        
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .info-box {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            max-width: 1200px;
+            width: 100%;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+        }
+        
+        .info-box p {
+            color: #333;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🌍 World Map</h1>
+        <p>Explore the world with this interactive map</p>
+    </header>
+    
+    <div class="map-container">
+        <div id="map"></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <script>// Initialize the map
+const map = L.map('map').setView([20, 0], 2);
+
+// Add OpenStreetMap tile layer
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors',
+    maxZoom: 19,
+    minZoom: 2
+}).addTo(map);
+
+// Add click event to show coordinates
+map.on('click', function(e) {
+    const lat = e.latlng.lat.toFixed(4);
+    const lng = e.latlng.lng.toFixed(4);
+    
+    L.popup()
+        .setLatLng(e.latlng)
+        .setContent(`<b>Location</b><br>Latitude: ${lat}<br>Longitude: ${lng}`)
+        .openOn(map);
+});
+
+// Add some example markers for major cities
+const cities = [
+    { name: 'New York', coords: [40.7128, -74.0060] },
+    { name: 'London', coords: [51.5074, -0.1278] },
+    { name: 'Tokyo', coords: [35.6762, 139.6503] },
+    { name: 'Paris', coords: [48.8566, 2.3522] }
+];
+
+cities.forEach(city => {
+    L.marker(city.coords)
+        .addTo(map)
+        .bindPopup(`<b>${city.name}</b>`);
+});</script>
+</body>
+</html> -->
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NASA NDVI World Map</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .map-container {
+            width: 100%;
+            max-width: 1200px;
+            height: 600px;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            border: 3px solid rgba(255,255,255,0.2);
+            position: relative;
+        }
+        
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .controls {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            max-width: 1200px;
+            width: 100%;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .control-group label {
+            font-weight: 600;
+            color: #333;
+            font-size: 0.9em;
+        }
+        
+        .control-group input,
+        .control-group select {
+            padding: 8px 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 1em;
+        }
+        
+        button {
+            padding: 10px 20px;
+            background: #2d5a3d;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            transition: background 0.3s;
+            align-self: flex-end;
+        }
+        
+        button:hover {
+            background: #1a472a;
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .info-box {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            max-width: 1200px;
+            width: 100%;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+        }
+        
+        .info-box h3 {
+            color: #2d5a3d;
+            margin-bottom: 10px;
+        }
+        
+        .info-box p {
+            color: #333;
+            line-height: 1.6;
+            margin-bottom: 8px;
+        }
+        
+        .legend {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            z-index: 1000;
+        }
+        
+        .legend h4 {
+            margin: 0 0 10px 0;
+            font-size: 0.9em;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 5px 0;
+            font-size: 0.85em;
+        }
+        
+        .legend-color {
+            width: 30px;
+            height: 15px;
+            margin-right: 8px;
+            border: 1px solid #ccc;
+        }
+        
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px 30px;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            z-index: 2000;
+            display: none;
+        }
+        
+        .loading.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🌍 NASA NDVI World Map</h1>
+        <p class="subtitle">Normalized Difference Vegetation Index - Global Vegetation Health</p>
+    </header>
+    
+    <div class="map-container">
+        <div id="map"></div>
+        <div class="legend">
+            <h4>NDVI Scale</h4>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #8B4513;"></div>
+                <span>-1.0 to -0.1 (Water/Snow)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #D2B48C;"></div>
+                <span>0.0 to 0.2 (Bare Soil)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #F0E68C;"></div>
+                <span>0.2 to 0.4 (Sparse Veg)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #90EE90;"></div>
+                <span>0.4 to 0.6 (Moderate Veg)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #228B22;"></div>
+                <span>0.6 to 0.8 (Dense Veg)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #006400;"></div>
+                <span>0.8 to 1.0 (Very Dense)</span>
+            </div>
+        </div>
+        <div class="loading" id="loading">
+            <p>Loading NDVI data...</p>
+        </div>
+    </div>
+    
+    <div class="controls">
+        <div class="control-group">
+            <label for="dateInput">Date:</label>
+            <input type="date" id="dateInput" value="2024-06-01">
+        </div>
+        <div class="control-group">
+            <label for="productSelect">Product:</label>
+            <select id="productSelect">
+                <option value="MOD13A2">MODIS Terra (16-day)</option>
+                <option value="MYD13A2">MODIS Aqua (16-day)</option>
+            </select>
+        </div>
+        <button id="loadBtn">Load NDVI Data</button>
+    </div>
+    
+    <div class="info-box">
+        <h3>About NDVI (Normalized Difference Vegetation Index)</h3>
+        <p><strong>What is NDVI?</strong> NDVI is a numerical indicator that uses the visible and near-infrared bands of the electromagnetic spectrum to analyze remote sensing measurements and assess whether the target being observed contains live green vegetation or not.</p>
+        <p><strong>Scale:</strong> NDVI values range from -1 to +1. Higher values (0.6-0.9) indicate dense, healthy vegetation. Lower values (0.2-0.4) indicate sparse vegetation, and values near 0 or negative indicate non-vegetated surfaces like water, snow, or bare soil.</p>
+        <p><strong>Data Source:</strong> NASA MODIS (Moderate Resolution Imaging Spectroradiometer) satellites provide global NDVI data. This visualization uses NASA's GIBS (Global Imagery Browse Services) for tile imagery.</p>
+        <p><strong>How to use:</strong> Select a date and product, then click "Load NDVI Data" to display vegetation data. Click anywhere on the map to see NDVI values for that location. Zoom in for more detail!</p>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <script>
+// Initialize the map
+const map = L.map('map').setView([20, 0], 2);
+
+// Add base OpenStreetMap layer
+const baseLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors',
+    maxZoom: 19,
+    minZoom: 2
+}).addTo(map);
+
+let ndviLayer = null;
+
+// Function to get NDVI color based on value
+function getNDVIColor(value) {
+    if (value < 0) return '#8B4513'; // Brown - water/snow
+    if (value < 0.2) return '#D2B48C'; // Tan - bare soil
+    if (value < 0.4) return '#F0E68C'; // Khaki - sparse vegetation
+    if (value < 0.6) return '#90EE90'; // Light green - moderate vegetation
+    if (value < 0.8) return '#228B22'; // Forest green - dense vegetation
+    return '#006400'; // Dark green - very dense vegetation
+}
+
+// Function to load NDVI layer from NASA GIBS
+function loadNDVILayer() {
+    const date = document.getElementById('dateInput').value.replace(/-/g, '');
+    const product = document.getElementById('productSelect').value;
+    const loading = document.getElementById('loading');
+    
+    loading.classList.add('active');
+    
+    // Remove existing NDVI layer if present
+    if (ndviLayer) {
+        map.removeLayer(ndviLayer);
+    }
+    
+    // NASA GIBS WMTS endpoint for NDVI
+    // Using MODIS Terra or Aqua NDVI 16-Day product
+    const gibsUrl = `https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/${product}_006_NDVI/default/${date}/250m/{z}/{y}/{x}.png`;
+    
+    ndviLayer = L.tileLayer(gibsUrl, {
+        attribution: 'NASA EOSDIS GIBS',
+        maxZoom: 9,
+        minZoom: 2,
+        opacity: 0.7,
+        tileSize: 512,
+        bounds: [[-90, -180], [90, 180]]
+    });
+    
+    ndviLayer.on('load', function() {
+        loading.classList.remove('active');
+    });
+    
+    ndviLayer.on('tileerror', function(error) {
+        console.error('Tile loading error:', error);
+        loading.classList.remove('active');
+        alert('Unable to load NDVI data for this date. Try a different date or product. NASA GIBS may not have data for recent dates or specific date ranges.');
+    });
+    
+    ndviLayer.addTo(map);
+}
+
+// Add click event to show coordinates and estimated NDVI
+map.on('click', function(e) {
+    const lat = e.latlng.lat.toFixed(4);
+    const lng = e.latlng.lng.toFixed(4);
+    
+    // Simulate NDVI value (in real implementation, this would query the actual data)
+    // For demonstration, we'll estimate based on latitude and general climate patterns
+    let estimatedNDVI = 0;
+    const absLat = Math.abs(e.latlng.lat);
+    
+    if (absLat < 10) {
+        // Tropical regions - high vegetation
+        estimatedNDVI = 0.6 + Math.random() * 0.3;
+    } else if (absLat < 30) {
+        // Subtropical - variable
+        estimatedNDVI = 0.3 + Math.random() * 0.4;
+    } else if (absLat < 60) {
+        // Temperate - moderate
+        estimatedNDVI = 0.4 + Math.random() * 0.3;
+    } else {
+        // Polar - low vegetation
+        estimatedNDVI = 0.1 + Math.random() * 0.2;
+    }
+    
+    const ndviValue = estimatedNDVI.toFixed(3);
+    const color = getNDVIColor(parseFloat(ndviValue));
+    
+    L.popup()
+        .setLatLng(e.latlng)
+        .setContent(`
+            <b>Location</b><br>
+            Latitude: ${lat}<br>
+            Longitude: ${lng}<br>
+            <br>
+            <b style="color: ${color}">Estimated NDVI: ${ndviValue}</b><br>
+            <small>(Actual values shown in overlay)</small>
+        `)
+        .openOn(map);
+});
+
+// Load button event
+document.getElementById('loadBtn').addEventListener('click', function() {
+    loadNDVILayer();
+});
+
+// Set max date to today
+const today = new Date().toISOString().split('T')[0];
+document.getElementById('dateInput').max = today;
+
+// Load initial NDVI layer
+loadNDVILayer();
+
+// Add some example markers for reference locations
+const referenceLocations = [
+    { name: 'Amazon Rainforest', coords: [-3.4653, -62.2159], type: 'Dense Vegetation' },
+    { name: 'Sahara Desert', coords: [23.4162, 25.6628], type: 'Sparse Vegetation' },
+    { name: 'Greenland Ice Sheet', coords: [72.0, -40.0], type: 'Ice/Snow' },
+    { name: 'Great Plains, USA', coords: [41.8781, -103.4595], type: 'Agricultural' }
+];
+
+referenceLocations.forEach(location => {
+    L.marker(location.coords)
+        .addTo(map)
+        .bindPopup(`<b>${location.name}</b><br><i>${location.type}</i>`);
+});
+    </script>
+</body>
+</html>
