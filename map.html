@@ -1,119 +1,3 @@
-<!-- <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>World Map</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            /* background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); */
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 20px;
-        }
-        
-        header {
-            text-align: center;
-            /* color: white; */
-            margin-bottom: 20px;
-        }
-        
-        h1 {
-            font-size: 2.5em;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-            margin-bottom: 10px;
-        }
-        
-        .map-container {
-            width: 100%;
-            max-width: 1200px;
-            height: 600px;
-            border-radius: 15px;
-            overflow: hidden;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-            border: 3px solid rgba(255,255,255,0.2);
-        }
-        
-        #map {
-            width: 100%;
-            height: 100%;
-        }
-        
-        .info-box {
-            background: white;
-            padding: 15px 20px;
-            border-radius: 10px;
-            margin-top: 20px;
-            max-width: 1200px;
-            width: 100%;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
-        }
-        
-        .info-box p {
-            color: #333;
-            line-height: 1.6;
-        }
-    </style>
-</head>
-<body>
-    <header>
-        <h1>🌍 World Map</h1>
-        <p>Explore the world with this interactive map</p>
-    </header>
-    
-    <div class="map-container">
-        <div id="map"></div>
-    </div>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-    <script>// Initialize the map
-const map = L.map('map').setView([20, 0], 2);
-
-// Add OpenStreetMap tile layer
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap contributors',
-    maxZoom: 19,
-    minZoom: 2
-}).addTo(map);
-
-// Add click event to show coordinates
-map.on('click', function(e) {
-    const lat = e.latlng.lat.toFixed(4);
-    const lng = e.latlng.lng.toFixed(4);
-    
-    L.popup()
-        .setLatLng(e.latlng)
-        .setContent(`<b>Location</b><br>Latitude: ${lat}<br>Longitude: ${lng}`)
-        .openOn(map);
-});
-
-// Add some example markers for major cities
-const cities = [
-    { name: 'New York', coords: [40.7128, -74.0060] },
-    { name: 'London', coords: [51.5074, -0.1278] },
-    { name: 'Tokyo', coords: [35.6762, 139.6503] },
-    { name: 'Paris', coords: [48.8566, 2.3522] }
-];
-
-cities.forEach(city => {
-    L.marker(city.coords)
-        .addTo(map)
-        .bindPopup(`<b>${city.name}</b>`);
-});</script>
-</body>
-</html> -->
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -130,6 +14,7 @@ cities.forEach(city => {
         
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a472a 0%, #2d5a3d 100%);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
@@ -181,7 +66,7 @@ cities.forEach(city => {
             display: flex;
             gap: 15px;
             flex-wrap: wrap;
-            align-items: center;
+            align-items: flex-end;
         }
         
         .control-group {
@@ -214,7 +99,6 @@ cities.forEach(city => {
             font-size: 1em;
             font-weight: 600;
             transition: background 0.3s;
-            align-self: flex-end;
         }
         
         button:hover {
@@ -293,6 +177,40 @@ cities.forEach(city => {
         .loading.active {
             display: block;
         }
+
+        .status-message {
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .status-message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+
+        .status-message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+
+        .status-message.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+            display: block;
+        }
+
+        .date-suggestions {
+            font-size: 0.85em;
+            color: #666;
+            margin-top: 5px;
+        }
     </style>
 </head>
 <body>
@@ -337,25 +255,29 @@ cities.forEach(city => {
     
     <div class="controls">
         <div class="control-group">
-            <label for="dateInput">Date:</label>
-            <input type="date" id="dateInput" value="2024-06-01">
+            <label for="dateInput">Date (YYYY-MM-DD):</label>
+            <input type="date" id="dateInput" value="2023-07-01">
+            <div class="date-suggestions">Try: 2023-07-01, 2023-01-01, 2024-06-01</div>
         </div>
         <div class="control-group">
-            <label for="productSelect">Product:</label>
+            <label for="productSelect">Satellite Product:</label>
             <select id="productSelect">
-                <option value="MOD13A2">MODIS Terra (16-day)</option>
-                <option value="MYD13A2">MODIS Aqua (16-day)</option>
+                <option value="MODIS_Terra_NDVI_8Day">MODIS Terra NDVI (8-Day)</option>
+                <option value="MODIS_Aqua_NDVI_8Day">MODIS Aqua NDVI (8-Day)</option>
+                <option value="VIIRS_NOAA20_NDVI_8Day">VIIRS NOAA-20 NDVI (8-Day)</option>
             </select>
         </div>
         <button id="loadBtn">Load NDVI Data</button>
     </div>
-    
+
     <div class="info-box">
+        <div id="statusMessage" class="status-message"></div>
         <h3>About NDVI (Normalized Difference Vegetation Index)</h3>
-        <p><strong>What is NDVI?</strong> NDVI is a numerical indicator that uses the visible and near-infrared bands of the electromagnetic spectrum to analyze remote sensing measurements and assess whether the target being observed contains live green vegetation or not.</p>
+        <p><strong>What is NDVI?</strong> NDVI is a numerical indicator that uses the visible and near-infrared bands of the electromagnetic spectrum to analyze remote sensing measurements and assess whether the target being observed contains live green vegetation.</p>
         <p><strong>Scale:</strong> NDVI values range from -1 to +1. Higher values (0.6-0.9) indicate dense, healthy vegetation. Lower values (0.2-0.4) indicate sparse vegetation, and values near 0 or negative indicate non-vegetated surfaces like water, snow, or bare soil.</p>
-        <p><strong>Data Source:</strong> NASA MODIS (Moderate Resolution Imaging Spectroradiometer) satellites provide global NDVI data. This visualization uses NASA's GIBS (Global Imagery Browse Services) for tile imagery.</p>
-        <p><strong>How to use:</strong> Select a date and product, then click "Load NDVI Data" to display vegetation data. Click anywhere on the map to see NDVI values for that location. Zoom in for more detail!</p>
+        <p><strong>Data Source:</strong> NASA MODIS (Moderate Resolution Imaging Spectroradiometer) and VIIRS (Visible Infrared Imaging Radiometer Suite) satellites provide global NDVI data through NASA's GIBS (Global Imagery Browse Services).</p>
+        <p><strong>How to use:</strong> Select a date and satellite product, then click "Load NDVI Data". The imagery updates every 8 days. Dates must align with available satellite passes. Click anywhere on the map to see estimated NDVI values.</p>
+        <p><strong>Note:</strong> GIBS is an open service and does not require authentication. If data doesn't load, try a date from early-to-mid 2023 or 2024.</p>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -371,54 +293,103 @@ const baseLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.pn
 }).addTo(map);
 
 let ndviLayer = null;
+let errorShown = false;
 
 // Function to get NDVI color based on value
 function getNDVIColor(value) {
-    if (value < 0) return '#8B4513'; // Brown - water/snow
-    if (value < 0.2) return '#D2B48C'; // Tan - bare soil
-    if (value < 0.4) return '#F0E68C'; // Khaki - sparse vegetation
-    if (value < 0.6) return '#90EE90'; // Light green - moderate vegetation
-    if (value < 0.8) return '#228B22'; // Forest green - dense vegetation
-    return '#006400'; // Dark green - very dense vegetation
+    if (value < 0) return '#8B4513';
+    if (value < 0.2) return '#D2B48C';
+    if (value < 0.4) return '#F0E68C';
+    if (value < 0.6) return '#90EE90';
+    if (value < 0.8) return '#228B22';
+    return '#006400';
+}
+
+// Function to show status message
+function showStatus(message, type) {
+    const statusEl = document.getElementById('statusMessage');
+    statusEl.textContent = message;
+    statusEl.className = `status-message ${type}`;
+    
+    if (type === 'success' || type === 'info') {
+        setTimeout(() => {
+            statusEl.className = 'status-message';
+        }, 5000);
+    }
 }
 
 // Function to load NDVI layer from NASA GIBS
 function loadNDVILayer() {
-    const date = document.getElementById('dateInput').value.replace(/-/g, '');
+    const dateInput = document.getElementById('dateInput').value;
+    const date = dateInput.replace(/-/g, '');
     const product = document.getElementById('productSelect').value;
     const loading = document.getElementById('loading');
     
+    if (!dateInput) {
+        showStatus('Please select a date', 'error');
+        return;
+    }
+    
     loading.classList.add('active');
+    showStatus('Loading NDVI data...', 'info');
     
     // Remove existing NDVI layer if present
     if (ndviLayer) {
         map.removeLayer(ndviLayer);
     }
     
-    // NASA GIBS WMTS endpoint for NDVI
-    // Using MODIS Terra or Aqua NDVI 16-Day product
-    const gibsUrl = `https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/${product}_006_NDVI/default/${date}/250m/{z}/{y}/{x}.png`;
+    // NASA GIBS WMTS endpoint - note these are OPEN and don't require auth
+    const gibsUrl = `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/${product}/default/${date}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.png`;
     
     ndviLayer = L.tileLayer(gibsUrl, {
         attribution: 'NASA EOSDIS GIBS',
         maxZoom: 9,
         minZoom: 2,
-        opacity: 0.7,
-        tileSize: 512,
-        bounds: [[-90, -180], [90, 180]]
+        opacity: 0.75,
+        tileSize: 256
     });
     
-    ndviLayer.on('load', function() {
-        loading.classList.remove('active');
+    let tilesLoaded = 0;
+    let tilesErrored = 0;
+    
+    ndviLayer.on('tileloadstart', function() {
+        // Track loading
+    });
+    
+    ndviLayer.on('tileload', function() {
+        tilesLoaded++;
+        if (tilesLoaded === 1) {
+            loading.classList.remove('active');
+            showStatus(`NDVI data loaded successfully for ${dateInput}!`, 'success');
+            errorShown = false;
+        }
     });
     
     ndviLayer.on('tileerror', function(error) {
+        tilesErrored++;
         console.error('Tile loading error:', error);
-        loading.classList.remove('active');
-        alert('Unable to load NDVI data for this date. Try a different date or product. NASA GIBS may not have data for recent dates or specific date ranges.');
+        
+        if (tilesErrored === 3 && tilesLoaded === 0) {
+            loading.classList.remove('active');
+            if (!errorShown) {
+                errorShown = true;
+                showStatus(`No NDVI data available for ${dateInput}. Try dates from 2023 like 2023-07-01, 2023-01-01, or 2024-06-01. Data is available every 8 days.`, 'error');
+            }
+        }
     });
     
     ndviLayer.addTo(map);
+    
+    // Timeout fallback
+    setTimeout(() => {
+        if (tilesLoaded === 0) {
+            loading.classList.remove('active');
+            if (!errorShown) {
+                errorShown = true;
+                showStatus(`Could not load data for ${dateInput}. MODIS/VIIRS data may not be available for this specific date. Try 2023-07-01 or check NASA Worldview for available dates.`, 'error');
+            }
+        }
+    }, 8000);
 }
 
 // Add click event to show coordinates and estimated NDVI
@@ -426,22 +397,17 @@ map.on('click', function(e) {
     const lat = e.latlng.lat.toFixed(4);
     const lng = e.latlng.lng.toFixed(4);
     
-    // Simulate NDVI value (in real implementation, this would query the actual data)
-    // For demonstration, we'll estimate based on latitude and general climate patterns
+    // Simulate NDVI value based on latitude and climate zones
     let estimatedNDVI = 0;
     const absLat = Math.abs(e.latlng.lat);
     
     if (absLat < 10) {
-        // Tropical regions - high vegetation
         estimatedNDVI = 0.6 + Math.random() * 0.3;
     } else if (absLat < 30) {
-        // Subtropical - variable
         estimatedNDVI = 0.3 + Math.random() * 0.4;
     } else if (absLat < 60) {
-        // Temperate - moderate
         estimatedNDVI = 0.4 + Math.random() * 0.3;
     } else {
-        // Polar - low vegetation
         estimatedNDVI = 0.1 + Math.random() * 0.2;
     }
     
@@ -456,19 +422,22 @@ map.on('click', function(e) {
             Longitude: ${lng}<br>
             <br>
             <b style="color: ${color}">Estimated NDVI: ${ndviValue}</b><br>
-            <small>(Actual values shown in overlay)</small>
+            <small>(Simulated based on latitude)</small>
         `)
         .openOn(map);
 });
 
 // Load button event
 document.getElementById('loadBtn').addEventListener('click', function() {
+    errorShown = false;
     loadNDVILayer();
 });
 
-// Set max date to today
-const today = new Date().toISOString().split('T')[0];
-document.getElementById('dateInput').max = today;
+// Set reasonable date limits
+const today = new Date();
+const maxDate = new Date(today.getFullYear(), today.getMonth() - 2, 1);
+document.getElementById('dateInput').max = maxDate.toISOString().split('T')[0];
+document.getElementById('dateInput').min = '2000-01-01';
 
 // Load initial NDVI layer
 loadNDVILayer();
