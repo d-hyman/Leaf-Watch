@@ -6,7 +6,9 @@
   --gap:    clamp(6px, 0.9vw, 12px);
 }
 
-body { margin: 0; }
+body { 
+  margin: 0;
+ }
 
 /* shared page container */
 .container{
