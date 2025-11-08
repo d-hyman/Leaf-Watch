@@ -1,5 +1,4 @@
 import pandas as pd
-from datasets import load_dataset
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -11,7 +10,6 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
 from scipy import stats
-from datetime import datetime
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -24,21 +22,16 @@ plt.rcParams['figure.figsize'] = (12, 6)
 # ============================================================================
 
 print("=" * 80)
-print("DEFORESTATION DATA ANALYSIS - ZONE NABEUL")
+print("GLOBAL FOREST COVER ANALYSIS (2000-2010)")
 print("=" * 80)
 
-# Load dataset from Hugging Face
-ds = load_dataset("chiraz/deforestation_data_parquet_zone_nabeul")
-df = pd.DataFrame(ds['train'])  # Adjust split name if needed
+# Load the CSV file
+df = pd.read_csv("deforest.csv")
 
-# Save to CSV for backup
-df.to_csv("deforestation_data_parquet_zone_nabeul.csv", index=False)
-
-# Basic information
 print("\n1. DATASET OVERVIEW")
 print("-" * 80)
 print(f"Dataset shape: {df.shape}")
-print(f"Number of rows: {len(df)}")
+print(f"Number of countries: {len(df)}")
 print(f"Number of columns: {len(df.columns)}")
 print("\nColumn names:")
 print(df.columns.tolist())
@@ -77,7 +70,7 @@ print("=" * 80)
 df_clean = df.drop_duplicates()
 print(f"Rows after removing duplicates: {len(df_clean)}")
 
-# Handle missing values (adjust based on your columns)
+# Handle missing values
 numeric_columns = df_clean.select_dtypes(include=[np.number]).columns
 for col in numeric_columns:
     if df_clean[col].isnull().sum() > 0:
@@ -93,92 +86,142 @@ print("\n" + "=" * 80)
 print("EXPLORATORY DATA ANALYSIS")
 print("=" * 80)
 
-# Identify NDVI columns and other key metrics
-ndvi_cols = [col for col in df_clean.columns if 'ndvi' in col.lower()]
-print(f"\nNDVI-related columns: {ndvi_cols}")
+# Key statistics
+print(f"\nForest Cover Statistics:")
+print(f"  Total countries analyzed: {len(df_clean)}")
+print(f"  Average forest cover (2000): {df_clean['two_thousand_percent'].mean():.2f}%")
+print(f"  Average forest cover (2010): {df_clean['two_thousand_ten_percent'].mean():.2f}%")
+print(f"  Average forest loss: {df_clean['delta_percent'].mean():.2f}%")
 
 # ============================================================================
 # 4. VISUALIZATIONS
 # ============================================================================
 
-# 4.1 Distribution of NDVI Mean
-if 'ndvi_mean' in df_clean.columns:
-    plt.figure(figsize=(12, 6))
-    
-    plt.subplot(1, 2, 1)
-    sns.histplot(df_clean['ndvi_mean'], bins=50, kde=True, color='green')
-    plt.title('Distribution of NDVI Mean', fontsize=14, fontweight='bold')
-    plt.xlabel('NDVI Mean')
-    plt.ylabel('Frequency')
-    
-    plt.subplot(1, 2, 2)
-    sns.boxplot(y=df_clean['ndvi_mean'], color='lightgreen')
-    plt.title('NDVI Mean Box Plot', fontsize=14, fontweight='bold')
-    plt.ylabel('NDVI Mean')
-    
-    plt.tight_layout()
-    plt.savefig('ndvi_distribution.png', dpi=300, bbox_inches='tight')
-    plt.show()
-    
-    print(f"\nNDVI Mean Statistics:")
-    print(f"  Mean: {df_clean['ndvi_mean'].mean():.4f}")
-    print(f"  Median: {df_clean['ndvi_mean'].median():.4f}")
-    print(f"  Std Dev: {df_clean['ndvi_mean'].std():.4f}")
-    print(f"  Min: {df_clean['ndvi_mean'].min():.4f}")
-    print(f"  Max: {df_clean['ndvi_mean'].max():.4f}")
+# 4.1 Distribution of Forest Cover Change
+plt.figure(figsize=(14, 6))
 
-# 4.2 Correlation Matrix
-numeric_cols = df_clean.select_dtypes(include=[np.number]).columns
-if len(numeric_cols) > 1:
-    plt.figure(figsize=(12, 10))
-    correlation_matrix = df_clean[numeric_cols].corr()
-    sns.heatmap(correlation_matrix, annot=True, cmap='RdYlGn', center=0,
-                fmt='.2f', square=True, linewidths=1)
-    plt.title('Correlation Matrix of Numeric Variables', fontsize=16, fontweight='bold')
-    plt.tight_layout()
-    plt.savefig('correlation_matrix.png', dpi=300, bbox_inches='tight')
-    plt.show()
-    
-    # Print strong correlations
-    print("\n6. STRONG CORRELATIONS (|r| > 0.7):")
-    print("-" * 80)
-    for i in range(len(correlation_matrix.columns)):
-        for j in range(i+1, len(correlation_matrix.columns)):
-            if abs(correlation_matrix.iloc[i, j]) > 0.7:
-                print(f"{correlation_matrix.columns[i]} <-> {correlation_matrix.columns[j]}: "
-                      f"{correlation_matrix.iloc[i, j]:.3f}")
+plt.subplot(1, 2, 1)
+sns.histplot(df_clean['delta_percent'], bins=50, kde=True, color='forestgreen')
+plt.title('Distribution of Forest Cover Change (2000-2010)', fontsize=14, fontweight='bold')
+plt.xlabel('Forest Cover Change (%)')
+plt.ylabel('Frequency')
+plt.axvline(x=0, color='red', linestyle='--', linewidth=2, label='No Change')
+plt.legend()
 
-# 4.3 Time Series Analysis (if date column exists)
-date_cols = [col for col in df_clean.columns if 'date' in col.lower() or 'time' in col.lower()]
-if date_cols and 'ndvi_mean' in df_clean.columns:
-    date_col = date_cols[0]
-    try:
-        df_clean[date_col] = pd.to_datetime(df_clean[date_col])
-        df_sorted = df_clean.sort_values(date_col)
-        
-        plt.figure(figsize=(15, 6))
-        plt.plot(df_sorted[date_col], df_sorted['ndvi_mean'], 
-                linewidth=2, color='green', alpha=0.7)
-        plt.title('NDVI Mean Over Time', fontsize=16, fontweight='bold')
-        plt.xlabel('Date')
-        plt.ylabel('NDVI Mean')
-        plt.grid(True, alpha=0.3)
-        plt.tight_layout()
-        plt.savefig('ndvi_timeseries.png', dpi=300, bbox_inches='tight')
-        plt.show()
-    except:
-        print(f"Could not parse {date_col} as datetime")
+plt.subplot(1, 2, 2)
+sns.boxplot(y=df_clean['delta_percent'], color='lightgreen')
+plt.title('Forest Cover Change Box Plot', fontsize=14, fontweight='bold')
+plt.ylabel('Forest Cover Change (%)')
+plt.axhline(y=0, color='red', linestyle='--', linewidth=2)
 
-# 4.4 Interactive Plotly Visualizations
-if 'ndvi_mean' in df_clean.columns and 'ndvi_std' in df_clean.columns:
-    # Scatter plot with standard deviation
-    fig = px.scatter(df_clean, x='ndvi_mean', y='ndvi_std',
-                     title='NDVI Mean vs Standard Deviation',
-                     labels={'ndvi_mean': 'NDVI Mean', 'ndvi_std': 'NDVI Standard Deviation'},
-                     color='ndvi_mean', color_continuous_scale='Greens')
-    fig.update_layout(height=600)
-    fig.write_html('ndvi_scatter.html')
-    print("\nInteractive scatter plot saved as 'ndvi_scatter.html'")
+plt.tight_layout()
+plt.savefig('forest_change_distribution.png', dpi=300, bbox_inches='tight')
+plt.show()
+
+print(f"\nForest Change Statistics:")
+print(f"  Mean Change: {df_clean['delta_percent'].mean():.4f}%")
+print(f"  Median Change: {df_clean['delta_percent'].median():.4f}%")
+print(f"  Std Dev: {df_clean['delta_percent'].std():.4f}%")
+print(f"  Min Change: {df_clean['delta_percent'].min():.4f}%")
+print(f"  Max Change: {df_clean['delta_percent'].max():.4f}%")
+
+# 4.2 Top 10 Countries with Highest Deforestation
+deforestation = df_clean[df_clean['delta_percent'] > 0].nlargest(10, 'delta_percent')
+plt.figure(figsize=(12, 6))
+sns.barplot(data=deforestation, y='country', x='delta_percent', palette='Reds_r')
+plt.title('Top 10 Countries with Highest Deforestation (2000-2010)', fontsize=14, fontweight='bold')
+plt.xlabel('Forest Loss (%)')
+plt.ylabel('Country')
+plt.tight_layout()
+plt.savefig('top_deforestation.png', dpi=300, bbox_inches='tight')
+plt.show()
+
+# 4.3 Top 10 Countries with Forest Gain
+reforestation = df_clean[df_clean['delta_percent'] < 0].nsmallest(10, 'delta_percent')
+plt.figure(figsize=(12, 6))
+sns.barplot(data=reforestation, y='country', x='delta_percent', palette='Greens')
+plt.title('Top 10 Countries with Forest Gain (2000-2010)', fontsize=14, fontweight='bold')
+plt.xlabel('Forest Gain (%)')
+plt.ylabel('Country')
+plt.tight_layout()
+plt.savefig('top_reforestation.png', dpi=300, bbox_inches='tight')
+plt.show()
+
+# 4.4 Scatter Plot: Forest Cover 2000 vs 2010
+plt.figure(figsize=(12, 8))
+scatter = plt.scatter(df_clean['two_thousand_percent'], 
+                     df_clean['two_thousand_ten_percent'],
+                     c=df_clean['delta_percent'], 
+                     cmap='RdYlGn_r',
+                     s=100, 
+                     alpha=0.6,
+                     edgecolors='black',
+                     linewidth=0.5)
+plt.colorbar(scatter, label='Forest Change (%)')
+plt.plot([0, 100], [0, 100], 'r--', linewidth=2, label='No Change Line')
+plt.title('Forest Cover: 2000 vs 2010', fontsize=16, fontweight='bold')
+plt.xlabel('Forest Cover 2000 (%)')
+plt.ylabel('Forest Cover 2010 (%)')
+plt.legend()
+plt.grid(True, alpha=0.3)
+plt.tight_layout()
+plt.savefig('forest_cover_comparison.png', dpi=300, bbox_inches='tight')
+plt.show()
+
+# 4.5 Correlation Matrix
+numeric_cols = ['area', 'two_thousand_area', 'two_thousand_percent', 
+                'two_thousand_ten_area', 'two_thousand_ten_percent', 
+                'delta_area', 'delta_percent']
+plt.figure(figsize=(10, 8))
+correlation_matrix = df_clean[numeric_cols].corr()
+sns.heatmap(correlation_matrix, annot=True, cmap='RdYlGn', center=0,
+            fmt='.2f', square=True, linewidths=1, cbar_kws={'label': 'Correlation'})
+plt.title('Correlation Matrix of Forest Variables', fontsize=16, fontweight='bold')
+plt.tight_layout()
+plt.savefig('correlation_matrix.png', dpi=300, bbox_inches='tight')
+plt.show()
+
+# Print strong correlations
+print("\n6. STRONG CORRELATIONS (|r| > 0.7):")
+print("-" * 80)
+for i in range(len(correlation_matrix.columns)):
+    for j in range(i+1, len(correlation_matrix.columns)):
+        if abs(correlation_matrix.iloc[i, j]) > 0.7:
+            print(f"{correlation_matrix.columns[i]} <-> {correlation_matrix.columns[j]}: "
+                  f"{correlation_matrix.iloc[i, j]:.3f}")
+
+# 4.6 Interactive Plotly Visualizations
+fig = px.scatter(df_clean, 
+                 x='two_thousand_percent', 
+                 y='two_thousand_ten_percent',
+                 color='delta_percent',
+                 size='area',
+                 hover_name='country',
+                 hover_data=['delta_area', 'delta_percent'],
+                 title='Interactive: Forest Cover Change by Country (2000-2010)',
+                 labels={'two_thousand_percent': 'Forest Cover 2000 (%)',
+                        'two_thousand_ten_percent': 'Forest Cover 2010 (%)',
+                        'delta_percent': 'Change (%)'},
+                 color_continuous_scale='RdYlGn_r')
+fig.add_trace(go.Scatter(x=[0, 100], y=[0, 100], mode='lines',
+                         name='No Change', line=dict(color='red', dash='dash')))
+fig.update_layout(height=700)
+fig.write_html('forest_cover_interactive.html')
+print("\nInteractive plot saved as 'forest_cover_interactive.html'")
+
+# World map visualization
+fig_map = px.choropleth(df_clean,
+                        locations='country',
+                        locationmode='country names',
+                        color='delta_percent',
+                        hover_name='country',
+                        hover_data=['two_thousand_percent', 'two_thousand_ten_percent'],
+                        color_continuous_scale='RdYlGn_r',
+                        title='Global Forest Cover Change (2000-2010)',
+                        labels={'delta_percent': 'Forest Change (%)'})
+fig_map.update_layout(height=600)
+fig_map.write_html('forest_change_map.html')
+print("Interactive map saved as 'forest_change_map.html'")
 
 # ============================================================================
 # 5. STATISTICAL TESTS
@@ -188,81 +231,96 @@ print("\n" + "=" * 80)
 print("STATISTICAL ANALYSIS")
 print("=" * 80)
 
-if 'ndvi_mean' in df_clean.columns:
-    # Normality test
-    statistic, p_value = stats.normaltest(df_clean['ndvi_mean'].dropna())
-    print(f"\n7. NORMALITY TEST (D'Agostino-Pearson):")
-    print("-" * 80)
-    print(f"Statistic: {statistic:.4f}")
-    print(f"P-value: {p_value:.4f}")
-    print(f"Distribution is {'normal' if p_value > 0.05 else 'not normal'} (α=0.05)")
+# Normality test
+statistic, p_value = stats.normaltest(df_clean['delta_percent'].dropna())
+print(f"\n7. NORMALITY TEST (D'Agostino-Pearson):")
+print("-" * 80)
+print(f"Statistic: {statistic:.4f}")
+print(f"P-value: {p_value:.4f}")
+print(f"Distribution is {'normal' if p_value > 0.05 else 'not normal'} (α=0.05)")
+
+# Paired t-test: comparing 2000 vs 2010
+t_stat, t_pvalue = stats.ttest_rel(df_clean['two_thousand_percent'], 
+                                    df_clean['two_thousand_ten_percent'])
+print(f"\n8. PAIRED T-TEST (2000 vs 2010):")
+print("-" * 80)
+print(f"T-statistic: {t_stat:.4f}")
+print(f"P-value: {t_pvalue:.6f}")
+print(f"Result: {'Significant' if t_pvalue < 0.05 else 'Not significant'} difference (α=0.05)")
 
 # ============================================================================
-# 6. TREND ANALYSIS AND PREDICTIONS
+# 6. PREDICTIVE MODELING
 # ============================================================================
 
 print("\n" + "=" * 80)
-print("TREND ANALYSIS & PREDICTIVE MODELING")
+print("PREDICTIVE MODELING")
 print("=" * 80)
 
-if 'ndvi_mean' in df_clean.columns and len(df_clean) > 10:
-    # Prepare data for modeling
-    X = np.arange(len(df_clean)).reshape(-1, 1)
-    y = df_clean['ndvi_mean'].values
-    
-    # Split data
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    
-    # Linear Regression
-    lr_model = LinearRegression()
-    lr_model.fit(X_train, y_train)
-    lr_predictions = lr_model.predict(X_test)
-    
-    print("\n8. LINEAR REGRESSION MODEL:")
-    print("-" * 80)
-    print(f"Coefficient (slope): {lr_model.coef_[0]:.6f}")
-    print(f"Intercept: {lr_model.intercept_:.6f}")
-    print(f"R² Score: {r2_score(y_test, lr_predictions):.4f}")
-    print(f"RMSE: {np.sqrt(mean_squared_error(y_test, lr_predictions)):.4f}")
-    print(f"MAE: {mean_absolute_error(y_test, lr_predictions):.4f}")
-    
-    # Random Forest (if enough data)
-    if len(df_clean) > 50:
-        rf_model = RandomForestRegressor(n_estimators=100, random_state=42)
-        rf_model.fit(X_train, y_train)
-        rf_predictions = rf_model.predict(X_test)
-        
-        print("\n9. RANDOM FOREST MODEL:")
-        print("-" * 80)
-        print(f"R² Score: {r2_score(y_test, rf_predictions):.4f}")
-        print(f"RMSE: {np.sqrt(mean_squared_error(y_test, rf_predictions)):.4f}")
-        print(f"MAE: {mean_absolute_error(y_test, rf_predictions):.4f}")
-    
-    # Visualization of predictions
-    plt.figure(figsize=(14, 6))
-    
-    plt.subplot(1, 2, 1)
-    plt.scatter(X, y, alpha=0.5, label='Actual Data', color='green')
-    plt.plot(X, lr_model.predict(X), color='red', linewidth=2, label='Linear Trend')
-    plt.title('NDVI Mean with Linear Trend', fontsize=14, fontweight='bold')
-    plt.xlabel('Time Index')
-    plt.ylabel('NDVI Mean')
-    plt.legend()
-    plt.grid(True, alpha=0.3)
-    
-    plt.subplot(1, 2, 2)
-    plt.scatter(y_test, lr_predictions, alpha=0.6, color='blue')
-    plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 
+# Prepare data: predict 2010 forest cover based on 2000 data and area
+X = df_clean[['two_thousand_percent', 'area']].values
+y = df_clean['two_thousand_ten_percent'].values
+
+# Split data
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Linear Regression
+lr_model = LinearRegression()
+lr_model.fit(X_train, y_train)
+lr_predictions = lr_model.predict(X_test)
+
+print("\n9. LINEAR REGRESSION MODEL:")
+print("-" * 80)
+print(f"Features: Forest Cover 2000 (%), Total Area")
+print(f"Target: Forest Cover 2010 (%)")
+print(f"R² Score: {r2_score(y_test, lr_predictions):.4f}")
+print(f"RMSE: {np.sqrt(mean_squared_error(y_test, lr_predictions)):.4f}")
+print(f"MAE: {mean_absolute_error(y_test, lr_predictions):.4f}")
+
+# Random Forest
+rf_model = RandomForestRegressor(n_estimators=100, random_state=42, max_depth=10)
+rf_model.fit(X_train, y_train)
+rf_predictions = rf_model.predict(X_test)
+
+print("\n10. RANDOM FOREST MODEL:")
+print("-" * 80)
+print(f"R² Score: {r2_score(y_test, rf_predictions):.4f}")
+print(f"RMSE: {np.sqrt(mean_squared_error(y_test, rf_predictions)):.4f}")
+print(f"MAE: {mean_absolute_error(y_test, rf_predictions):.4f}")
+
+# Feature importance
+feature_importance = pd.DataFrame({
+    'Feature': ['Forest Cover 2000 (%)', 'Total Area'],
+    'Importance': rf_model.feature_importances_
+}).sort_values('Importance', ascending=False)
+print(f"\nFeature Importance:")
+print(feature_importance)
+
+# Visualization of predictions
+fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+
+# Linear Regression
+axes[0].scatter(y_test, lr_predictions, alpha=0.6, color='blue', s=50)
+axes[0].plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 
              'r--', linewidth=2, label='Perfect Prediction')
-    plt.title('Predicted vs Actual NDVI', fontsize=14, fontweight='bold')
-    plt.xlabel('Actual NDVI')
-    plt.ylabel('Predicted NDVI')
-    plt.legend()
-    plt.grid(True, alpha=0.3)
-    
-    plt.tight_layout()
-    plt.savefig('prediction_analysis.png', dpi=300, bbox_inches='tight')
-    plt.show()
+axes[0].set_title('Linear Regression: Predicted vs Actual', fontsize=14, fontweight='bold')
+axes[0].set_xlabel('Actual Forest Cover 2010 (%)')
+axes[0].set_ylabel('Predicted Forest Cover 2010 (%)')
+axes[0].legend()
+axes[0].grid(True, alpha=0.3)
+
+# Random Forest
+axes[1].scatter(y_test, rf_predictions, alpha=0.6, color='green', s=50)
+axes[1].plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 
+             'r--', linewidth=2, label='Perfect Prediction')
+axes[1].set_title('Random Forest: Predicted vs Actual', fontsize=14, fontweight='bold')
+axes[1].set_xlabel('Actual Forest Cover 2010 (%)')
+axes[1].set_ylabel('Predicted Forest Cover 2010 (%)')
+axes[1].legend()
+axes[1].grid(True, alpha=0.3)
+
+plt.tight_layout()
+plt.savefig('prediction_models.png', dpi=300, bbox_inches='tight')
+plt.show()
 
 # ============================================================================
 # 7. SUMMARY REPORT
@@ -272,26 +330,34 @@ print("\n" + "=" * 80)
 print("ANALYSIS SUMMARY")
 print("=" * 80)
 
-print(f"\nDataset: Zone Nabeul Deforestation Data")
-print(f"Total Records: {len(df_clean)}")
-print(f"Features: {len(df_clean.columns)}")
-print(f"\nKey Findings:")
-print(f"  - NDVI values range from {df_clean['ndvi_mean'].min():.4f} to {df_clean['ndvi_mean'].max():.4f}" 
-      if 'ndvi_mean' in df_clean.columns else "")
-print(f"  - Average vegetation health (NDVI): {df_clean['ndvi_mean'].mean():.4f}" 
-      if 'ndvi_mean' in df_clean.columns else "")
+countries_with_loss = len(df_clean[df_clean['delta_percent'] > 0])
+countries_with_gain = len(df_clean[df_clean['delta_percent'] < 0])
+countries_no_change = len(df_clean[df_clean['delta_percent'] == 0])
 
-if 'ndvi_mean' in df_clean.columns:
-    trend = "increasing" if lr_model.coef_[0] > 0 else "decreasing"
-    print(f"  - Overall trend: {trend}")
-    print(f"  - Rate of change: {lr_model.coef_[0]:.6f} per time unit")
+print(f"\nDataset: Global Forest Cover Data (2000-2010)")
+print(f"Total Countries: {len(df_clean)}")
+print(f"\nKey Findings:")
+print(f"  - Countries with forest loss: {countries_with_loss} ({countries_with_loss/len(df_clean)*100:.1f}%)")
+print(f"  - Countries with forest gain: {countries_with_gain} ({countries_with_gain/len(df_clean)*100:.1f}%)")
+print(f"  - Countries with no change: {countries_no_change} ({countries_no_change/len(df_clean)*100:.1f}%)")
+print(f"  - Average forest loss: {df_clean[df_clean['delta_percent'] > 0]['delta_percent'].mean():.2f}%")
+print(f"  - Average forest gain: {df_clean[df_clean['delta_percent'] < 0]['delta_percent'].mean():.2f}%")
+print(f"  - Total forest area lost: {df_clean[df_clean['delta_area'] > 0]['delta_area'].sum():,.0f} sq km")
+
+print("\nMost Affected Countries:")
+print(f"  Highest deforestation: {df_clean.loc[df_clean['delta_percent'].idxmax(), 'country']} "
+      f"({df_clean['delta_percent'].max():.2f}%)")
+print(f"  Highest reforestation: {df_clean.loc[df_clean['delta_percent'].idxmin(), 'country']} "
+      f"({df_clean['delta_percent'].min():.2f}%)")
 
 print("\n" + "=" * 80)
 print("Analysis complete! Generated files:")
-print("  - deforestation_data_parquet_zone_nabeul.csv")
-print("  - ndvi_distribution.png")
+print("  - forest_change_distribution.png")
+print("  - top_deforestation.png")
+print("  - top_reforestation.png")
+print("  - forest_cover_comparison.png")
 print("  - correlation_matrix.png")
-print("  - ndvi_timeseries.png (if date column available)")
-print("  - ndvi_scatter.html")
-print("  - prediction_analysis.png")
+print("  - forest_cover_interactive.html")
+print("  - forest_change_map.html")
+print("  - prediction_models.png")
 print("=" * 80)
