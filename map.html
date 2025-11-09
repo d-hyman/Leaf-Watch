@@ -25,7 +25,6 @@
     button{flex:1;padding:10px;background:#06c;color:#fff;border:none;border-radius:6px;font-size:14px;cursor:pointer;transition:background .2s}
     button:hover{background:#0052a3}
     button:disabled{background:#ccc;cursor:not-allowed}
-    
   </style>
 </head>
 <body>
@@ -41,7 +40,7 @@
         <option value="MODIS_Terra_CorrectedReflectance_TrueColor">True Color (Terra/MODIS)</option>
         <option value="MODIS_Aqua_CorrectedReflectance_TrueColor">True Color (Aqua/MODIS)</option>
         <option value="VIIRS_SNPP_CorrectedReflectance_TrueColor">True Color (VIIRS/SNPP)</option>
-        <option value="MODIS_Terra_NDVI_8Day">NDVI (MODIS Terra, 8-Day)</option>
+        <option value="MODIS_Terra_L3_NDVI_16Day">NDVI (MODIS Terra, 16-Day)</option>
       </select>
     </div>
 
@@ -61,17 +60,33 @@
   </div>
 
   <script>
-    // -------- Per-layer metadata --------
-    // NDVI is 8-day PNG; daily products are JPG.
-    // 'phase' anchors NDVI to 2025-11-05 so the grid is {..., 2025-10-28, 2025-11-05, 2025-11-13, ...}
-    const LAYER_META = {
-      MODIS_Terra_CorrectedReflectance_TrueColor: { ext: "jpg", stepDays: 1, start: "2000-02-24" },
-      MODIS_Aqua_CorrectedReflectance_TrueColor:  { ext: "jpg", stepDays: 1, start: "2002-07-04" },
-      VIIRS_SNPP_CorrectedReflectance_TrueColor:  { ext: "jpg", stepDays: 1, start: "2012-01-20" },
-      MODIS_Terra_NDVI_8Day:                      { ext: "png", stepDays: 8, start: "2000-02-18", phase: "2025-11-05" }
+    // ===== UTC-safe helpers (avoid DST issues) =====
+    const DAY = 86400000;
+    const asUTCNoon = d => { const x = new Date(d); x.setUTCHours(12,0,0,0); return x; };
+    const dateUTC = (y,m,d) => new Date(Date.UTC(y, m, d, 12, 0, 0));
+    const parseISOUTC = s => { const [y,m,d]=s.split('-').map(Number); return dateUTC(y,m-1,d); };
+    const toISODate = d => {
+      const x = asUTCNoon(d);
+      const y = x.getUTCFullYear();
+      const m = String(x.getUTCMonth()+1).padStart(2,'0');
+      const dd = String(x.getUTCDate()).padStart(2,'0');
+      return `${y}-${m}-${dd}`;
     };
+    const addDaysUTC = (d,n) => asUTCNoon(new Date(asUTCNoon(d).getTime() + n*DAY));
+    const daysBetweenUTC = (a,b) => Math.round((asUTCNoon(b) - asUTCNoon(a)) / DAY);
+    const todayUTC = () => asUTCNoon(new Date());
 
-    // ---------- Map / UI refs ----------
+    // ===== Layer metadata =====
+    const LAYER_META = {
+      MODIS_Terra_CorrectedReflectance_TrueColor: { ext: "jpg", stepDays: 1,  start: "2000-02-24" },
+      MODIS_Aqua_CorrectedReflectance_TrueColor:  { ext: "jpg", stepDays: 1,  start: "2002-07-04" },
+      VIIRS_SNPP_CorrectedReflectance_TrueColor:  { ext: "jpg", stepDays: 1,  start: "2012-01-20" },
+      // 16-day NDVI anchored to 2025-10-23
+      MODIS_Terra_L3_NDVI_16Day:                    { ext: "png", stepDays: 16, start: "2000-02-18", phase: "2025-10-23" }
+    };
+    const getMeta = id => LAYER_META[id] || { ext:"jpg", stepDays:1, start:"2000-01-01" };
+
+    // ===== Map / UI =====
     const map = L.map('map', { center: [20,0], zoom: 3, minZoom: 2, maxZoom: 9 });
     let currentLayer = null;
     let playing = false;
@@ -81,56 +96,45 @@
     const layerSelect = document.getElementById('layerSelect');
     const playBtn     = document.getElementById('playBtn');
     const todayBtn    = document.getElementById('todayBtn');
-    //const loading     = document.getElementById('loading');
     const labelStart  = document.getElementById('labelStart');
     const labelMid    = document.getElementById('labelMid');
     const labelEnd    = document.getElementById('labelEnd');
 
-    // ---------- Date helpers ----------
-    const DAY = 86400000;
-    function toISODate(d){ return new Date(d).toISOString().slice(0,10); }
-    function addDays(d,n){ const x = new Date(d); x.setDate(x.getDate()+n); return x; }
-    function daysBetween(a,b){ return Math.floor((b-a)/DAY); }
-    function getMeta(id){ return LAYER_META[id] || { ext:"jpg", stepDays:1, start:"2000-01-01" }; }
-    function getProductStart(id){ return new Date(getMeta(id).start); }
-    function today(){ return new Date(); }
+    // Use a global base so one slider works for all layers
+    const GLOBAL_BASE_START = parseISOUTC("2000-02-18");
+    const dateFromSlider = idx => addDaysUTC(GLOBAL_BASE_START, parseInt(idx,10));
 
-    // Use a global base so one slider works for all layers.
-    const GLOBAL_BASE_START = new Date("2000-02-18"); // earliest product start among our layers
-    function dateFromSlider(idx){ const d = new Date(GLOBAL_BASE_START); d.setDate(d.getDate()+parseInt(idx,10)); return d; }
-
-    // First phase-aligned date ON/AFTER product start (with given phase)
     function firstPhaseAlignedOnOrAfterStart(layerId){
       const meta  = getMeta(layerId);
-      const start = new Date(meta.start);
+      const start = parseISOUTC(meta.start);
       const step  = meta.stepDays || 1;
-      const phase = meta.phase ? new Date(meta.phase) : start;
-      const k = Math.ceil((start - phase) / DAY / step);
-      return addDays(phase, k*step);
+      const phase = meta.phase ? parseISOUTC(meta.phase) : start;
+      const k = Math.ceil(daysBetweenUTC(phase, start) / step);
+      return addDaysUTC(phase, k*step);
     }
 
-    // Snap to layer cadence; for NDVI use the phase grid; for daily, clamp to product start.
     function snapDateForLayer(d, layerId){
       const meta  = getMeta(layerId);
       const step  = meta.stepDays || 1;
-      const prodStart = getProductStart(layerId);
+      const prodStart = parseISOUTC(meta.start);
+      const x = asUTCNoon(d);
 
-      // Daily layers: just not before product start
       if (!meta.phase){
-        const x = new Date(d);
-        return (x < prodStart) ? prodStart : new Date(x.getFullYear(), x.getMonth(), x.getDate());
+        return (x < prodStart) ? prodStart : x; // daily products: clamp to start
       }
 
-      // NDVI with phase
-      const phase = new Date(meta.phase);
+      // phased (16-day) — floor to the previous multiple from the phase
+      const phase = parseISOUTC(meta.phase);
+      const diffDays = daysBetweenUTC(phase, x);
+      const steps = Math.floor(diffDays / step);
+      let snapped = addDaysUTC(phase, steps*step);
+
       const alignedStart = firstPhaseAlignedOnOrAfterStart(layerId);
-      const diffSteps = Math.floor((d - phase) / DAY / step);
-      let snapped = addDays(phase, diffSteps*step);
       if (snapped < alignedStart) snapped = alignedStart;
       return snapped;
     }
 
-    // ---------- Tiles ----------
+    // ===== Tiles =====
     function createGIBSLayer(layerId, dateISO){
       const meta = getMeta(layerId);
       const url  = `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/${layerId}/default/${dateISO}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.${meta.ext}`;
@@ -143,26 +147,26 @@
       });
     }
 
-    // ---------- Slider range/labels ----------
+    // ===== Slider range/labels =====
     function setSliderRange(){
-      const end = today();
-      const max = Math.max(0, daysBetween(GLOBAL_BASE_START, end));
+      const end = todayUTC();
+      const max = Math.max(0, daysBetweenUTC(GLOBAL_BASE_START, end));
       timeSlider.min = "0";
       timeSlider.max = String(max);
 
-      const startYear = GLOBAL_BASE_START.getFullYear();
-      const endYear   = end.getFullYear();
+      const startYear = GLOBAL_BASE_START.getUTCFullYear();
+      const endYear   = end.getUTCFullYear();
       labelStart.textContent = startYear;
       labelMid.textContent   = Math.floor((startYear + endYear)/2);
       labelEnd.textContent   = endYear;
     }
 
     function snapSliderTo(date){
-      const idx = daysBetween(GLOBAL_BASE_START, date);
+      const idx = daysBetweenUTC(GLOBAL_BASE_START, date);
       timeSlider.value = String(idx);
     }
 
-    // ---------- Map update (await tiles) ----------
+    // ===== Buffered update (add new ASAP, then swap) =====
     async function updateMap(){
       const layerId = layerSelect.value;
       const raw     = dateFromSlider(timeSlider.value);
@@ -170,24 +174,25 @@
       const dateStr = toISODate(snapped);
       dateDisplay.textContent = dateStr;
 
-      if (currentLayer){ currentLayer.off(); map.removeLayer(currentLayer); }
-      //loading.classList.add('active');
+      // create next layer and add immediately so it can start fetching tiles
+      const nextLayer = createGIBSLayer(layerId, dateStr);
+      nextLayer.addTo(map);
 
-      const layer = createGIBSLayer(layerId, dateStr);
-      currentLayer = layer;
-
+      // Wait until tiles either load or error (but don’t block forever)
       await new Promise((resolve)=>{
-        const done = ()=> resolve();
-        layer.once('load', done);
-        layer.once('tileerror', done);
-        setTimeout(done, 0); // time to load
+        let settled = false;
+        const done = ()=>{ if (!settled){ settled = true; resolve(); } };
+        nextLayer.once('load', done);
+        nextLayer.once('tileerror', done);
+        setTimeout(done, 1500); // safety cap
       });
 
-      layer.addTo(map);
-      //loading.classList.remove('active');
+      // Swap: remove old after next is ready/settled
+      if (currentLayer){ map.removeLayer(currentLayer); }
+      currentLayer = nextLayer;
     }
 
-    // ---------- Play backwards starting FROM 2025-11-05 for NDVI ----------
+    // ===== Play (3s per frame, imagery loads ASAP) =====
     async function togglePlay(){
       if (playing){ playing = false; playBtn.textContent = '▶ Play'; return; }
       playing = true; playBtn.textContent = '⏸ Pause';
@@ -196,59 +201,65 @@
       const meta    = getMeta(layerId);
       const step    = meta.stepDays || 1;
 
-      // If NDVI, force starting point = 2025-11-05 (your request).
-      if (layerId === "MODIS_Terra_NDVI_8Day"){
-        const anchor = new Date("2025-11-05");     // start FROM here
-        const startFrom = snapDateForLayer(anchor, layerId); // ensure it's on the 8-day grid
-        snapSliderTo(startFrom);
+      // For the 16-day NDVI, force start exactly at the anchor
+      if (layerId === "MODIS_Terra_L3_NDVI_16Day"){
+        const anchor = snapDateForLayer(parseISOUTC(meta.phase), layerId);
+        snapSliderTo(anchor);
         await updateMap();
       }
 
       while (playing){
-        // move backwards by layer cadence
-        let nextIdx = parseInt(timeSlider.value,10) - step;
+        const current = snapDateForLayer(dateFromSlider(timeSlider.value), layerId);
+        const next    = addDaysUTC(current, -step);
 
-        if (layerId === "MODIS_Terra_NDVI_8Day"){
-          // If we go before the earliest phase-aligned NDVI date, wrap back to anchor 2025-11-05
-          const earliest = firstPhaseAlignedOnOrAfterStart(layerId);
-          const earliestIdx = daysBetween(GLOBAL_BASE_START, earliest);
-          if (nextIdx < earliestIdx){
-            const anchor = snapDateForLayer(new Date("2025-11-05"), layerId);
-            nextIdx = daysBetween(GLOBAL_BASE_START, anchor);
-          }
-        } else {
-          // daily layers wrap to "today"
-          if (nextIdx < 0) nextIdx = parseInt(timeSlider.max,10);
-        }
+        // wrap to anchor if we run past earliest available
+        const earliest = firstPhaseAlignedOnOrAfterStart(layerId);
+        const nextClamped = (next < earliest)
+          ? snapDateForLayer(parseISOUTC(getMeta(layerId).phase), layerId)
+          : next;
 
-        timeSlider.value = String(nextIdx);
+        snapSliderTo(nextClamped);
         await updateMap();
-        await new Promise(r=>setTimeout(r, 3000)); // pacing
+
+        // Hold each frame ~3 seconds
+        const HOLD_MS = 3000;
+        const start = performance.now();
+        while (playing && performance.now() - start < HOLD_MS){
+          await new Promise(r=>setTimeout(r,150));
+        }
       }
     }
 
     function goToToday(){
-      const t = snapDateForLayer(today(), layerSelect.value);
+      const t = snapDateForLayer(todayUTC(), layerSelect.value);
       snapSliderTo(t);
       updateMap();
     }
 
-    // ---------- Events ----------
-    timeSlider.addEventListener('input', ()=> updateMap());
-    layerSelect.addEventListener('change', ()=>{
-      // keep current date but snap for the new layer
-      const raw = dateFromSlider(timeSlider.value);
-      const snapped = snapDateForLayer(raw, layerSelect.value);
+    // ===== Events =====
+    timeSlider.addEventListener('input', ()=>{
+      // Snap slider visually to valid frame so the thumb only ever lands on allowed dates
+      const snapped = snapDateForLayer(dateFromSlider(timeSlider.value), layerSelect.value);
       snapSliderTo(snapped);
       updateMap();
     });
-    playBtn.addEventListener('click', togglePlay);
-    todayBtn.addEventListener('click', goToToday);
 
-    // ---------- Init ----------
+    layerSelect.addEventListener('change', ()=>{
+      const meta = getMeta(layerSelect.value);
+      // If switching to 16-day NDVI, jump to the anchor; otherwise keep current date snapped
+      const target = meta.phase ? snapDateForLayer(parseISOUTC(meta.phase), layerSelect.value)
+                                : snapDateForLayer(dateFromSlider(timeSlider.value), layerSelect.value);
+      snapSliderTo(target);
+      updateMap();
+    });
+
+    document.getElementById('playBtn').addEventListener('click', togglePlay);
+    document.getElementById('todayBtn').addEventListener('click', goToToday);
+
+    // ===== Init =====
     setSliderRange();
-    // Start at today's valid date for default layer
-    const startAt = snapDateForLayer(today(), layerSelect.value);
+    // Start at today's valid frame for default layer
+    const startAt = snapDateForLayer(todayUTC(), layerSelect.value);
     snapSliderTo(startAt);
     updateMap();
   </script>
