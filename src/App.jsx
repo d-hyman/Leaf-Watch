@@ -6,7 +6,7 @@ function App() {
   return (
     <>
       <Header/>
-      <FactsBar />   {/* ⬅️ new grid of cards above the map */}
+      <FactsBar /> git
       <main>
         <MapFrame />
       </main>
