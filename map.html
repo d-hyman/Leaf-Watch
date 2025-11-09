@@ -25,13 +25,11 @@
     button{flex:1;padding:10px;background:#06c;color:#fff;border:none;border-radius:6px;font-size:14px;cursor:pointer;transition:background .2s}
     button:hover{background:#0052a3}
     button:disabled{background:#ccc;cursor:not-allowed}
-    .loading{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(255,255,255,.95);padding:20px 30px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.2);z-index:2000;display:none}
-    .loading.active{display:block}
+    
   </style>
 </head>
 <body>
   <div id="map"></div>
-  <div class="loading" id="loading">Loading map data...</div>
 
   <div class="controls">
     <h3>NASA Earth Observation</h3>
@@ -83,7 +81,7 @@
     const layerSelect = document.getElementById('layerSelect');
     const playBtn     = document.getElementById('playBtn');
     const todayBtn    = document.getElementById('todayBtn');
-    const loading     = document.getElementById('loading');
+    //const loading     = document.getElementById('loading');
     const labelStart  = document.getElementById('labelStart');
     const labelMid    = document.getElementById('labelMid');
     const labelEnd    = document.getElementById('labelEnd');
@@ -173,7 +171,7 @@
       dateDisplay.textContent = dateStr;
 
       if (currentLayer){ currentLayer.off(); map.removeLayer(currentLayer); }
-      loading.classList.add('active');
+      //loading.classList.add('active');
 
       const layer = createGIBSLayer(layerId, dateStr);
       currentLayer = layer;
@@ -182,11 +180,11 @@
         const done = ()=> resolve();
         layer.once('load', done);
         layer.once('tileerror', done);
-        setTimeout(done, 2500);
+        setTimeout(done, 0); // time to load
       });
 
       layer.addTo(map);
-      loading.classList.remove('active');
+      //loading.classList.remove('active');
     }
 
     // ---------- Play backwards starting FROM 2025-11-05 for NDVI ----------
