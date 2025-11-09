@@ -42,7 +42,6 @@ print(df.info())
 
 print("\n3. MISSING VALUES SUMMARY")
 print("-" * 80)
-## Calculate missing values
 missing = df.isnull().sum()
 missing_percent = (missing / len(df)) * 100
 missing_df = pd.DataFrame({
@@ -324,6 +323,186 @@ plt.savefig('prediction_models.png', dpi=300, bbox_inches='tight')
 plt.show()
 
 # ============================================================================
+# 7. FUTURE PREDICTIONS (2011-2075)
+# ============================================================================
+
+print("\n" + "=" * 80)
+print("FUTURE FOREST COVER PREDICTIONS (2011-2075)")
+print("=" * 80)
+
+# Calculate average annual change rate
+df_clean['annual_change_rate'] = df_clean['delta_percent'] / 10  # 10 years between 2000-2010
+
+# Create predictions for each country
+future_years = list(range(2011, 2076))
+predictions_data = []
+
+for idx, row in df_clean.iterrows():
+    country = row['country']
+    base_cover = row['two_thousand_ten_percent']
+    annual_rate = row['annual_change_rate']
+    area = row['area']
+    
+    country_predictions = {
+        'country': country,
+        'area': area,
+        '2000': row['two_thousand_percent'],
+        '2010': row['two_thousand_ten_percent']
+    }
+    
+    current_cover = base_cover
+    for year in future_years:
+        # Linear projection with constraints (forest cover can't be negative or >100%)
+        years_from_2010 = year - 2010
+        projected_cover = base_cover + (annual_rate * years_from_2010)
+        
+        # Apply constraints
+        projected_cover = max(0, min(100, projected_cover))
+        country_predictions[str(year)] = projected_cover
+    
+    predictions_data.append(country_predictions)
+
+# Create DataFrame with predictions
+predictions_df = pd.DataFrame(predictions_data)
+
+# Save predictions to CSV
+predictions_df.to_csv('forest_predictions_2011_2075.csv', index=False)
+print("\nPredictions saved to 'forest_predictions_2011_2075.csv'")
+
+# Summary statistics for predictions
+print(f"\n11. GLOBAL FOREST COVER PROJECTIONS:")
+print("-" * 80)
+selected_years = [2020, 2030, 2040, 2050, 2060, 2070, 2075]
+for year in selected_years:
+    avg_cover = predictions_df[str(year)].mean()
+    print(f"  {year}: Average forest cover = {avg_cover:.2f}%")
+
+# Identify countries at risk
+print(f"\n12. COUNTRIES AT CRITICAL RISK BY 2075:")
+print("-" * 80)
+critical_countries = predictions_df[predictions_df['2075'] < 10][['country', '2010', '2075']].sort_values('2075')
+print(f"Countries with <10% forest cover by 2075: {len(critical_countries)}")
+if len(critical_countries) > 0:
+    print(critical_countries.head(10))
+
+# Countries with potential recovery
+print(f"\n13. COUNTRIES WITH POTENTIAL FOREST RECOVERY:")
+print("-" * 80)
+recovery_countries = predictions_df[predictions_df['2075'] > predictions_df['2010']][['country', '2010', '2075']].sort_values('2075', ascending=False)
+print(f"Countries with increasing forest cover: {len(recovery_countries)}")
+if len(recovery_countries) > 0:
+    print(recovery_countries.head(10))
+
+# Visualization: Top 10 countries forest projections
+top_deforest = df_clean.nlargest(10, 'delta_percent')['country'].tolist()
+fig = plt.figure(figsize=(16, 10))
+
+# Plot 1: Global average over time
+ax1 = plt.subplot(2, 2, 1)
+years_all = [2000, 2010] + future_years
+global_avg = [
+    predictions_df['2000'].mean(),
+    predictions_df['2010'].mean()
+] + [predictions_df[str(year)].mean() for year in future_years]
+ax1.plot(years_all, global_avg, linewidth=3, color='green', marker='o', markevery=10)
+ax1.axvline(x=2010, color='red', linestyle='--', alpha=0.7, label='Historical | Projected')
+ax1.fill_between(years_all, global_avg, alpha=0.3, color='green')
+ax1.set_title('Global Average Forest Cover Projection (2000-2075)', fontsize=14, fontweight='bold')
+ax1.set_xlabel('Year')
+ax1.set_ylabel('Average Forest Cover (%)')
+ax1.grid(True, alpha=0.3)
+ax1.legend()
+
+# Plot 2: Top deforestation countries
+ax2 = plt.subplot(2, 2, 2)
+for country in top_deforest[:5]:
+    country_data = predictions_df[predictions_df['country'] == country].iloc[0]
+    country_timeline = [country_data['2000'], country_data['2010']] + [country_data[str(year)] for year in future_years]
+    ax2.plot(years_all, country_timeline, linewidth=2, marker='o', markevery=10, label=country, alpha=0.7)
+ax2.axvline(x=2010, color='red', linestyle='--', alpha=0.5)
+ax2.set_title('Top 5 Deforestation Countries - Projections', fontsize=14, fontweight='bold')
+ax2.set_xlabel('Year')
+ax2.set_ylabel('Forest Cover (%)')
+ax2.legend(fontsize=8)
+ax2.grid(True, alpha=0.3)
+
+# Plot 3: Distribution of forest cover in 2075
+ax3 = plt.subplot(2, 2, 3)
+ax3.hist(predictions_df['2075'], bins=30, color='forestgreen', alpha=0.7, edgecolor='black')
+ax3.axvline(predictions_df['2075'].mean(), color='red', linestyle='--', linewidth=2, label=f"Mean: {predictions_df['2075'].mean():.1f}%")
+ax3.set_title('Distribution of Forest Cover in 2075', fontsize=14, fontweight='bold')
+ax3.set_xlabel('Forest Cover (%)')
+ax3.set_ylabel('Number of Countries')
+ax3.legend()
+ax3.grid(True, alpha=0.3)
+
+# Plot 4: Change from 2010 to 2075
+ax4 = plt.subplot(2, 2, 4)
+predictions_df['change_2010_2075'] = predictions_df['2075'] - predictions_df['2010']
+colors = ['red' if x > 0 else 'green' for x in predictions_df['change_2010_2075']]
+predictions_df_sorted = predictions_df.sort_values('change_2010_2075')
+top_bottom = pd.concat([predictions_df_sorted.head(10), predictions_df_sorted.tail(10)])
+ax4.barh(range(len(top_bottom)), top_bottom['change_2010_2075'], 
+         color=['red' if x > 0 else 'green' for x in top_bottom['change_2010_2075']])
+ax4.set_yticks(range(len(top_bottom)))
+ax4.set_yticklabels(top_bottom['country'], fontsize=8)
+ax4.axvline(x=0, color='black', linestyle='-', linewidth=1)
+ax4.set_title('Projected Forest Cover Change (2010-2075)\nTop 10 Losses & Gains', fontsize=12, fontweight='bold')
+ax4.set_xlabel('Change in Forest Cover (%)')
+ax4.grid(True, alpha=0.3, axis='x')
+
+plt.tight_layout()
+plt.savefig('future_projections_2011_2075.png', dpi=300, bbox_inches='tight')
+plt.show()
+
+# Interactive visualization with Plotly
+milestone_years = [2000, 2010, 2020, 2030, 2040, 2050, 2060, 2070, 2075]
+fig_interactive = go.Figure()
+
+# Add traces for selected countries
+sample_countries = df_clean.nlargest(5, 'delta_percent')['country'].tolist() + \
+                   df_clean.nsmallest(5, 'delta_percent')['country'].tolist()
+
+for country in sample_countries:
+    country_data = predictions_df[predictions_df['country'] == country].iloc[0]
+    y_values = [country_data[str(year)] for year in milestone_years]
+    fig_interactive.add_trace(go.Scatter(
+        x=milestone_years,
+        y=y_values,
+        mode='lines+markers',
+        name=country,
+        line=dict(width=2),
+        marker=dict(size=6)
+    ))
+
+fig_interactive.add_vline(x=2010, line_dash="dash", line_color="red", 
+                          annotation_text="Historical | Projected")
+fig_interactive.update_layout(
+    title='Forest Cover Projections: Selected Countries (2000-2075)',
+    xaxis_title='Year',
+    yaxis_title='Forest Cover (%)',
+    height=600,
+    hovermode='x unified',
+    legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01)
+)
+fig_interactive.write_html('interactive_projections_2011_2075.html')
+print("Interactive projection saved as 'interactive_projections_2011_2075.html'")
+
+# Create world map for 2075 predictions
+fig_map_2075 = px.choropleth(predictions_df,
+                              locations='country',
+                              locationmode='country names',
+                              color='2075',
+                              hover_name='country',
+                              hover_data={'2010': ':.2f', '2075': ':.2f', 'change_2010_2075': ':.2f'},
+                              color_continuous_scale='RdYlGn',
+                              title='Projected Forest Cover by Country in 2075',
+                              labels={'2075': 'Forest Cover (%)'})
+fig_map_2075.update_layout(height=600)
+fig_map_2075.write_html('forest_cover_map_2075.html')
+print("2075 projection map saved as 'forest_cover_map_2075.html'")
+
+# ============================================================================
 # 7. SUMMARY REPORT
 # ============================================================================
 
@@ -361,4 +540,8 @@ print("  - correlation_matrix.png")
 print("  - forest_cover_interactive.html")
 print("  - forest_change_map.html")
 print("  - prediction_models.png")
+print("  - forest_predictions_2011_2075.csv")
+print("  - future_projections_2011_2075.png")
+print("  - interactive_projections_2011_2075.html")
+print("  - forest_cover_map_2075.html")
 print("=" * 80)
