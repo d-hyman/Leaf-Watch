@@ -37,9 +37,7 @@
     <div class="layer-select">
       <label>Layer Type:</label>
       <select id="layerSelect">
-        <option value="MODIS_Terra_CorrectedReflectance_TrueColor">True Color (Terra/MODIS)</option>
-        <option value="MODIS_Aqua_CorrectedReflectance_TrueColor">True Color (Aqua/MODIS)</option>
-        <option value="VIIRS_SNPP_CorrectedReflectance_TrueColor">True Color (VIIRS/SNPP)</option>
+        <option value="MODIS_Terra_Land_Surface_Temp_Day">Land Surface Temperature (Terra/MODIS)</option>
         <option value="MODIS_Terra_L3_NDVI_16Day">NDVI (MODIS Terra, 16-Day)</option>
       </select>
     </div>
@@ -78,12 +76,13 @@
 
     // ===== Layer metadata =====
     const LAYER_META = {
-      MODIS_Terra_CorrectedReflectance_TrueColor: { ext: "jpg", stepDays: 1,  start: "2000-02-24" },
-      MODIS_Aqua_CorrectedReflectance_TrueColor:  { ext: "jpg", stepDays: 1,  start: "2002-07-04" },
-      VIIRS_SNPP_CorrectedReflectance_TrueColor:  { ext: "jpg", stepDays: 1,  start: "2012-01-20" },
-      // 16-day NDVI anchored to 2025-10-23
-      MODIS_Terra_L3_NDVI_16Day:                    { ext: "png", stepDays: 16, start: "2000-02-18", phase: "2025-10-23" }
+      MODIS_Terra_Land_Surface_Temp_Day: { ext: "png", stepDays: 1, start: "2000-02-24" },
+      MODIS_Terra_CorrectedReflectance_TrueColor: { ext: "jpg", stepDays: 1, start: "2000-02-24" },
+      MODIS_Aqua_CorrectedReflectance_TrueColor:  { ext: "jpg", stepDays: 1, start: "2002-07-04" },
+      VIIRS_SNPP_CorrectedReflectance_TrueColor:  { ext: "jpg", stepDays: 1, start: "2012-01-20" },
+      MODIS_Terra_L3_NDVI_16Day: { ext: "png", stepDays: 16, start: "2000-02-18", phase: "2025-10-23" }
     };
+
     const getMeta = id => LAYER_META[id] || { ext:"jpg", stepDays:1, start:"2000-01-01" };
 
     // ===== Map / UI =====
@@ -134,18 +133,36 @@
       return snapped;
     }
 
-    // ===== Tiles =====
-    function createGIBSLayer(layerId, dateISO){
-      const meta = getMeta(layerId);
-      const url  = `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/${layerId}/default/${dateISO}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.${meta.ext}`;
-      return L.tileLayer(url, {
-        attribution: '© NASA EOSDIS GIBS',
-        tileSize: 256,
-        noWrap: true,
-        crossOrigin: true,
-        bounds: [[-85.0511,-180],[85.0511,180]]
-      });
-    }
+// ===== Tiles =====
+function createGIBSLayer(layerId, dateISO) {
+  const meta = getMeta(layerId);
+  let epsgId = "epsg3857";
+  let resolution = "GoogleMapsCompatible_Level9";
+
+  // MODIS Terra LST uses EPSG:4326 + 1km matrix
+  if (layerId === "MODIS_Terra_Land_Surface_Temp_Day") {
+    epsgId = "epsg4326";
+    resolution = "1km";
+  }
+
+  if (!layerId) {
+    console.warn("No EPSG layer ID found");
+  }
+
+  console.log(`Using ${epsgId} / ${resolution}`);
+
+  const url = `https://gibs.earthdata.nasa.gov/wmts/${epsgId}/best/${layerId}/default/${dateISO}/${resolution}/{z}/{y}/{x}.${meta.ext}`;
+
+  return L.tileLayer(url, {
+    attribution: "© NASA EOSDIS GIBS",
+    tileSize: 256,
+    noWrap: true,
+    crossOrigin: true,
+    bounds: [[-85.0511, -180], [85.0511, 180]],
+  });
+}
+
+
 
     // ===== Slider range/labels =====
     function setSliderRange(){
